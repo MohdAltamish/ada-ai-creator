@@ -28,7 +28,7 @@ export function getOAuthConfig() {
     process.env.FEATHERLESS_REDIRECT_URI ||
     "http://localhost:3000/api/auth/featherless/callback";
   const scopes =
-    process.env.FEATHERLESS_SCOPES || "api.access user.read user.write";
+    process.env.FEATHERLESS_SCOPES || "user.read user.write";
 
   return {
     clientId,
@@ -46,12 +46,13 @@ export function getOAuthConfig() {
  */
 export function buildAuthorizationUrl(state?: string): string {
   const config = getOAuthConfig();
+  const formattedScopes = config.scopes.replace(/\s+/g, "+");
 
   const query =
     `client_id=${encodeURIComponent(config.clientId)}` +
-    `&scope=${encodeURIComponent(config.scopes)}` +
     `&response_type=code` +
     `&redirect_uri=${encodeURIComponent(config.redirectUri)}` +
+    `&scope=${formattedScopes}` +
     (state ? `&state=${encodeURIComponent(state)}` : "");
 
   return `${config.authUrl}?${query}`;
