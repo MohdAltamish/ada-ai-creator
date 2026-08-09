@@ -31,7 +31,7 @@ for env_pair in \
   "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_jkIVFV3VbpgJLhKrE0MYZA_Qu3YyXCK" \
   "FEATHERLESS_API_KEY=rc_1a4d83d5c14fec0625e42bbe8ffdfcafb71a7383eb928a6002953129e019fb08" \
   "FEATHERLESS_MODEL=Qwen/Qwen2.5-7B-Instruct" \
-  "FEATHERLESS_CLIENT_ID=app_mfuaETjlur23Z1w0" \
+  "FEATHERLESS_CLIENT_ID=app_mfuaETjlur23Zlw0" \
   "FEATHERLESS_CLIENT_SECRET=secret_qJ-DHBxI5BQXJFDl5qmVA5g0CDwzvXOX" \
   "FEATHERLESS_REDIRECT_URI=https://ada-ai-creator.vercel.app/api/auth/featherless/callback" \
   "FEATHERLESS_SCOPES=user.read user.write" \

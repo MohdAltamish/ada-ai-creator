@@ -16,7 +16,7 @@ export function getOAuthConfig() {
     process.env.FEATHERLESS_CLIENT_ID &&
     process.env.FEATHERLESS_CLIENT_ID !== "YOUR_CLIENT_ID"
       ? process.env.FEATHERLESS_CLIENT_ID
-      : "app_mfuaETjlur23Z1w0";
+      : "app_mfuaETjlur23Zlw0";
 
   const clientSecret =
     process.env.FEATHERLESS_CLIENT_SECRET &&
