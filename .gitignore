@@ -6,3 +6,7 @@ node_modules
 .pnpm-store
 .DS_Store
 *.log
+.vercel
+server.js
+deploy-vercel.sh
+test_script.ts
