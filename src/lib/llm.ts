@@ -14,7 +14,7 @@ export async function generateJSON<T = unknown>(opts: {
 }): Promise<T> {
   const apiKey =
     process.env.FEATHERLESS_API_KEY ||
-    "rc_83c0b2f2e70e06d3c780fda78ba892b855c186e6de5813551dbb7a4e5d597077";
+    "rc_1a4d83d5c14fec0625e42bbe8ffdfcafb71a7383eb928a6002953129e019fb08";
   const model =
     process.env.FEATHERLESS_MODEL || "deepseek-ai/DeepSeek-V4-Flash-0731";
   const baseUrl =
