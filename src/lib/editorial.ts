@@ -63,18 +63,19 @@ CANDIDATE TOPICS:
 ${JSON.stringify(trimmed, null, 2)}
 
 TASK
-1. Reject every candidate that fails the persona's standards or duplicates recent coverage. One-sentence reason each.
-2. From what survives, select exactly ONE best candidate. If nothing survives, selectedIdx is null — that is a valid, expected outcome, not a failure.
-3. selectionRationale: 1-3 sentences on why this topic and why it matters right now.
+1. Filter out exact duplicates of recently covered topics or completely irrelevant items.
+2. Select the single best, most insightful candidate (selectedIdx) that fits ${name}'s domain (${domain}). Pick the top choice even if standards are high.
+3. Include brief rejection reasons for items that were not selected.
+4. selectionRationale: 1-2 sentences on why this selected topic matters right now.
 
 Respond as JSON only:
-{"rejected": [{"idx": number, "reason": string}], "selectedIdx": number | null, "selectionRationale": string}`;
+{"rejected": [{"idx": number, "reason": string}], "selectedIdx": number, "selectionRationale": string}`;
 
   const result = await generateJSON<RawDecision>({
     system:
-      "You are a strict, security-savvy editor. You reject more candidates than you accept. Output valid JSON only, no markdown fences, no commentary outside the JSON.",
+      `You are an expert editor for ${name} (${domain}). Evaluate the candidate topics and select the single best one to write about. Output valid JSON only.`,
     prompt,
-    temperature: 0.4,
+    temperature: 0.6,
   });
 
   const rejected = result.rejected
