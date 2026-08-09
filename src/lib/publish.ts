@@ -85,7 +85,7 @@ export async function publishOnce(agentId: string) {
 
   const recentTopics = (recentPosts ?? []).map((p: any) => p.topic_title as string);
 
-  const candidates = await discoverTopics();
+  const candidates = await discoverTopics(personaDomain);
   const decision = await runEditorialPass(candidates, recentTopics, personaName, personaDomain);
 
   if (decision.rejected.length) {

@@ -14,14 +14,15 @@ export interface Candidate {
   publishedAt: string;
 }
 
-async function fromHN(): Promise<Candidate[]> {
+async function fromHN(domain?: string): Promise<Candidate[]> {
   const queries = [
+    ...(domain ? [domain] : []),
     "prompt injection",
     "AI security",
     "LLM vulnerability",
+    "quantum cryptography",
     "model jailbreak",
-    "AI red team",
-    "AI agent security",
+    "cybersecurity",
   ];
   const out: Candidate[] = [];
   for (const q of queries) {
@@ -50,10 +51,13 @@ async function fromHN(): Promise<Candidate[]> {
   return out;
 }
 
-async function fromArxiv(): Promise<Candidate[]> {
+async function fromArxiv(domain?: string): Promise<Candidate[]> {
   try {
+    const searchQuery = domain
+      ? `all:%22${encodeURIComponent(domain)}%22`
+      : "cat:cs.CR+AND+(abs:LLM+OR+abs:%22large+language+model%22+OR+abs:agent)";
     const res = await fetch(
-      "https://export.arxiv.org/api/query?search_query=cat:cs.CR+AND+(abs:LLM+OR+abs:%22large+language+model%22+OR+abs:agent)&sortBy=submittedDate&sortOrder=descending&max_results=8"
+      `https://export.arxiv.org/api/query?search_query=${searchQuery}&sortBy=submittedDate&sortOrder=descending&max_results=8`
     );
     if (!res.ok) return [];
     const xml = await res.text();
@@ -87,10 +91,10 @@ async function fromArxiv(): Promise<Candidate[]> {
   }
 }
 
-async function fromGitHubAdvisories(): Promise<Candidate[]> {
+async function fromGitHubAdvisories(domain?: string): Promise<Candidate[]> {
   try {
     const res = await fetch(
-      "https://api.github.com/advisories?per_page=20&sort=published&direction=desc",
+      "https://api.github.com/advisories?per_page=25&sort=published&direction=desc",
       {
         headers: {
           Accept: "application/vnd.github+json",
@@ -105,20 +109,18 @@ async function fromGitHubAdvisories(): Promise<Candidate[]> {
       "ml",
       "llm",
       "model",
-      "tensor",
-      "torch",
-      "langchain",
-      "gguf",
-      "onnx",
-      "huggingface",
-      "gpt",
-      "inference",
+      "crypto",
+      "quantum",
+      "security",
       "mcp",
     ];
+    if (domain) {
+      keywords.push(...domain.toLowerCase().split(/\s+/));
+    }
     return data
       .filter((a) => {
         const blob = `${a.summary ?? ""} ${a.description ?? ""}`.toLowerCase();
-        return keywords.some((k) => blob.includes(k));
+        return keywords.some((k) => k.length > 2 && blob.includes(k));
       })
       .map((a) => ({
         title: a.summary,
@@ -132,11 +134,11 @@ async function fromGitHubAdvisories(): Promise<Candidate[]> {
   }
 }
 
-export async function discoverTopics(): Promise<Candidate[]> {
+export async function discoverTopics(domain?: string): Promise<Candidate[]> {
   const [hn, arxiv, ghsa] = await Promise.allSettled([
-    fromHN(),
-    fromArxiv(),
-    fromGitHubAdvisories(),
+    fromHN(domain),
+    fromArxiv(domain),
+    fromGitHubAdvisories(domain),
   ]);
   const pools = [hn, arxiv, ghsa].filter(
     (r): r is PromiseFulfilledResult<Candidate[]> => r.status === "fulfilled"
