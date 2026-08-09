@@ -105,6 +105,9 @@ export async function publishOnce(agentId: string) {
     return null;
   }
 
+  // Brief 1s pause so Featherless AI releases concurrency lock before writing pass
+  await new Promise((r) => setTimeout(r, 1000));
+
   const { text } = await writePost(decision.selected, recentPosts ?? [], personaName, personaDomain);
 
   const { data: inserted, error } = await supabase

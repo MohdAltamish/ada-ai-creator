@@ -3,6 +3,10 @@
 // OpenAI-compatible endpoint, so switching models is just an env var change.
 // Everything downstream just calls generateJSON() and expects parsed JSON back.
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function generateJSON<T = unknown>(opts: {
   system: string;
   prompt: string;
@@ -19,42 +23,57 @@ export async function generateJSON<T = unknown>(opts: {
   }
 
   const url = `${baseUrl}/chat/completions`;
+  const maxRetries = 4;
+  let lastError = "";
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [
-        { role: "system", content: opts.system },
-        { role: "user", content: opts.prompt },
-      ],
-      temperature: opts.temperature ?? 0.8,
-      response_format: { type: "json_object" },
-    }),
-  });
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: "system", content: opts.system },
+          { role: "user", content: opts.prompt },
+        ],
+        temperature: opts.temperature ?? 0.8,
+        response_format: { type: "json_object" },
+      }),
+    });
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Featherless API error ${res.status}: ${body}`);
+    if (res.status === 429) {
+      lastError = await res.text();
+      console.warn(
+        `Featherless 429 concurrency limit hit (attempt ${attempt + 1}/${maxRetries}), retrying in ${2.5 * (attempt + 1)}s...`
+      );
+      await delay(2500 * (attempt + 1));
+      continue;
+    }
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Featherless API error ${res.status}: ${body}`);
+    }
+
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) {
+      throw new Error(
+        "Featherless returned no content: " + JSON.stringify(data)
+      );
+    }
+
+    // Some models may wrap JSON in markdown fences — strip them if present.
+    const cleaned = text
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```\s*$/, "")
+      .trim();
+
+    return JSON.parse(cleaned) as T;
   }
 
-  const data = await res.json();
-  const text = data?.choices?.[0]?.message?.content;
-  if (!text) {
-    throw new Error(
-      "Featherless returned no content: " + JSON.stringify(data)
-    );
-  }
-
-  // Some models may wrap JSON in markdown fences — strip them if present.
-  const cleaned = text
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```\s*$/, "")
-    .trim();
-
-  return JSON.parse(cleaned) as T;
+  throw new Error(`Featherless API error 429 after ${maxRetries} retries: ${lastError}`);
 }
