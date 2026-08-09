@@ -7,6 +7,39 @@ export function ControlPanel({ currentInterval }: { currentInterval: number }) {
   const [domain, setDomain] = useState("Quantum Cryptography");
   const [status, setStatus] = useState("");
   const [interval, setIntervalVal] = useState(currentInterval);
+  const [showJson, setShowJson] = useState(false);
+  const [jsonPayload, setJsonPayload] = useState<string | null>(null);
+  const [activeAgentId, setActiveAgentId] = useState<string>("");
+  const [copied, setCopied] = useState(false);
+
+  async function fetchJsonFeed() {
+    if (showJson) {
+      setShowJson(false);
+      return;
+    }
+    setStatus("📡 Fetching live JSON feed payload from GET /api/agent/feed...");
+    try {
+      const agentRes = await fetch("/api/demo/latest-agent");
+      const agentData = await agentRes.json();
+      const agentId = agentData.agent?.id || "f7b8c9d0-1234-5678-9abc-def012345678";
+      setActiveAgentId(agentId);
+
+      const feedRes = await fetch(`/api/agent/feed?agentId=${agentId}`);
+      const feedData = await feedRes.json();
+      setJsonPayload(JSON.stringify(feedData, null, 2));
+      setShowJson(true);
+      setStatus("");
+    } catch (err: any) {
+      setStatus("❌ Failed to fetch JSON feed: " + err.message);
+    }
+  }
+
+  function copyJson() {
+    if (!jsonPayload) return;
+    navigator.clipboard.writeText(jsonPayload);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   async function triggerInstantPost() {
     setStatus("⏳ Running live topic discovery & LLM editorial generation... Please wait 5-10s");
@@ -130,6 +163,23 @@ export function ControlPanel({ currentInterval }: { currentInterval: number }) {
           🔄 Refresh Feed
         </button>
 
+        <button
+          onClick={fetchJsonFeed}
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 12,
+            fontWeight: 600,
+            padding: "8px 16px",
+            background: showJson ? "#c25e00" : "#2d3748",
+            color: "#fff",
+            border: "none",
+            borderRadius: 4,
+            cursor: "pointer",
+          }}
+        >
+          {showJson ? "❌ Hide JSON Feed" : "📊 View Raw JSON Feed (Judge View)"}
+        </button>
+
         <a
           href="/api/auth/featherless/login"
           style={{
@@ -233,6 +283,55 @@ export function ControlPanel({ currentInterval }: { currentInterval: number }) {
       {status && (
         <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--accent)", marginTop: 10 }}>
           {status}
+        </div>
+      )}
+
+      {showJson && jsonPayload && (
+        <div
+          style={{
+            marginTop: 16,
+            background: "#1a202c",
+            color: "#63b3ed",
+            border: "1px solid #2d3748",
+            borderRadius: 6,
+            padding: 16,
+            fontFamily: "var(--font-mono)",
+            fontSize: 12,
+            position: "relative",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <span style={{ color: "#a0aec0", fontSize: 11 }}>
+              📡 GET /api/agent/feed?agentId={activeAgentId}
+            </span>
+            <button
+              onClick={copyJson}
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                padding: "4px 10px",
+                background: copied ? "#38a169" : "#3182ce",
+                color: "#fff",
+                border: "none",
+                borderRadius: 4,
+                cursor: "pointer",
+              }}
+            >
+              {copied ? "✅ Copied!" : "📋 Copy Raw JSON"}
+            </button>
+          </div>
+          <pre
+            style={{
+              margin: 0,
+              maxHeight: 280,
+              overflowY: "auto",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              color: "#e2e8f0",
+            }}
+          >
+            {jsonPayload}
+          </pre>
         </div>
       )}
     </div>
