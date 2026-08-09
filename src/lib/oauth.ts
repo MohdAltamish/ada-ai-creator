@@ -28,7 +28,7 @@ export function getOAuthConfig() {
     process.env.FEATHERLESS_REDIRECT_URI ||
     "http://localhost:3000/api/auth/featherless/callback";
   const scopes =
-    process.env.FEATHERLESS_SCOPES || "openid profile user.read user.write";
+    process.env.FEATHERLESS_SCOPES || "api.access user.read user.write";
 
   return {
     clientId,

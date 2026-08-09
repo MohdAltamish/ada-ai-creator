@@ -34,7 +34,7 @@ for env_pair in \
   "FEATHERLESS_CLIENT_ID=app_mfuaETjlur23Zlw0" \
   "FEATHERLESS_CLIENT_SECRET=secret_qJ-DHBxI5BQXJFDl5qmVA5g0CDwzvXOX" \
   "FEATHERLESS_REDIRECT_URI=https://ada-ai-creator.vercel.app/api/auth/featherless/callback" \
-  "FEATHERLESS_SCOPES=openid profile user.read user.write" \
+  "FEATHERLESS_SCOPES=api.access user.read user.write" \
   "PUBLISH_INTERVAL_MINUTES=240" \
   "CRON_SECRET=pick-a-random-string"; do
   
