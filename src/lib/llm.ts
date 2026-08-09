@@ -16,7 +16,7 @@ export async function generateJSON<T = unknown>(opts: {
     process.env.FEATHERLESS_API_KEY ||
     "rc_1a4d83d5c14fec0625e42bbe8ffdfcafb71a7383eb928a6002953129e019fb08";
   const model =
-    process.env.FEATHERLESS_MODEL || "deepseek-ai/DeepSeek-V4-Flash-0731";
+    process.env.FEATHERLESS_MODEL || "Qwen/Qwen2.5-7B-Instruct";
   const baseUrl =
     process.env.FEATHERLESS_BASE_URL || "https://api.featherless.ai/v1";
 
