@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSupabase } from "@/lib/supabase";
 import { publishOnce } from "@/lib/publish";
+import {
+  isDefaultPersona,
+  generatePersonaProfile,
+} from "@/lib/persona";
 
 export async function POST(req: NextRequest) {
   let body: any = {};
@@ -13,10 +17,21 @@ export async function POST(req: NextRequest) {
 
   const name = body?.persona?.name || "Ada";
   const domain = body?.persona?.domain || "AI Security";
+  const intervalMinutes = body?.intervalMinutes ?? 240;
 
   const supabase = getSupabase();
   const now = new Date().toISOString();
   const agentId = randomUUID();
+
+  // §3: Generate a full persona profile for non-default personas
+  let personaProfile = null;
+  if (!isDefaultPersona(name, domain)) {
+    try {
+      personaProfile = await generatePersonaProfile(name, domain);
+    } catch (e) {
+      console.error("Failed to generate persona profile:", e);
+    }
+  }
 
   const { error } = await supabase.from("agents").insert({
     id: agentId,
@@ -24,6 +39,8 @@ export async function POST(req: NextRequest) {
     domain,
     created_at: now,
     last_published_at: now,
+    interval_minutes: intervalMinutes,
+    persona_profile: personaProfile,
   });
 
   if (error) {

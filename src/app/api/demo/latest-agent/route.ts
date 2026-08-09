@@ -7,7 +7,7 @@ export async function GET() {
   const supabase = getSupabase();
   const { data } = await supabase
     .from("agents")
-    .select("id, name, domain, created_at")
+    .select("id, name, domain, created_at, interval_minutes")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();

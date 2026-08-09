@@ -18,7 +18,11 @@
 import { getSupabase } from "./supabase";
 import { discoverTopics } from "./discovery";
 import { runEditorialPass } from "./editorial";
-import { PERSONA } from "./persona";
+import {
+  DEFAULT_PROFILE,
+  isDefaultPersona,
+  type PersonaProfile,
+} from "./persona";
 import { generateJSON } from "./llm";
 
 export let PUBLISH_INTERVAL_MINUTES = Number(
@@ -29,15 +33,38 @@ export function setPublishInterval(mins: number) {
   PUBLISH_INTERVAL_MINUTES = mins;
 }
 
-async function writePost(
-  chosen: { title: string; summary: string; url: string; source: string; rationale: string },
-  pastPosts: { text: string }[],
-  name = PERSONA.name,
-  domain = PERSONA.domain
-): Promise<{ text: string }> {
-  const examples = pastPosts.slice(0, 3).map((p) => p.text).join("\n---\n");
+/**
+ * §3: Resolve which PersonaProfile to use for a given agent row.
+ * Priority: stored persona_profile > default (if name/domain match) > minimal fallback.
+ */
+function resolveProfile(agent: any): PersonaProfile {
+  if (agent.persona_profile) return agent.persona_profile as PersonaProfile;
+  if (isDefaultPersona(agent.name, agent.domain)) return DEFAULT_PROFILE;
+  return {
+    ...DEFAULT_PROFILE,
+    name: agent.name,
+    domain: agent.domain,
+    discoveryKeywords: agent.domain.toLowerCase().split(/\s+/),
+  };
+}
 
-  const prompt = `Write ONE new post in ${name}'s voice about this topic.
+async function writePost(
+  chosen: {
+    title: string;
+    summary: string;
+    url: string;
+    source: string;
+    rationale: string;
+  },
+  pastPosts: { text: string }[],
+  profile: PersonaProfile
+): Promise<{ text: string }> {
+  const examples = pastPosts
+    .slice(0, 3)
+    .map((p) => p.text)
+    .join("\n---\n");
+
+  const prompt = `Write ONE new post in ${profile.name}'s voice about this topic.
 
 TOPIC: ${chosen.title}
 CONTEXT: ${chosen.summary}
@@ -45,7 +72,7 @@ SOURCE (${chosen.source}): ${chosen.url}
 WHY THIS WAS CHOSEN: ${chosen.rationale}
 
 VOICE RULES:
-${PERSONA.voice.map((v) => `- ${v}`).join("\n")}
+${profile.voice.map((v) => `- ${v}`).join("\n")}
 
 ${
   examples
@@ -58,7 +85,7 @@ Write 80-160 words of plain text. No markdown headers, no hashtags, no emoji, no
 Respond as JSON only: {"text": string}`;
 
   return generateJSON<{ text: string }>({
-    system: `You write as ${name}, ${domain} researcher. Stay strictly in character. Output valid JSON only.`,
+    system: `You write as ${profile.name}, ${profile.domain} researcher. Stay strictly in character. Output valid JSON only.`,
     prompt,
     temperature: 0.85,
   });
@@ -69,24 +96,40 @@ export async function publishOnce(agentId: string) {
 
   const { data: agent } = await supabase
     .from("agents")
-    .select("name, domain")
+    .select("name, domain, persona_profile")
     .eq("id", agentId)
     .single();
 
-  const personaName = agent?.name || PERSONA.name;
-  const personaDomain = agent?.domain || PERSONA.domain;
+  const profile = agent ? resolveProfile(agent) : DEFAULT_PROFILE;
 
   const { data: recentPosts } = await supabase
     .from("posts")
-    .select("topic_title, text")
+    .select("topic_title, text, sources")
     .eq("agent_id", agentId)
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(15);
 
-  const recentTopics = (recentPosts ?? []).map((p: any) => p.topic_title as string);
+  const recentTopics = (recentPosts ?? []).map(
+    (p: any) => p.topic_title as string
+  );
 
-  const candidates = await discoverTopics(personaDomain);
-  const decision = await runEditorialPass(candidates, recentTopics, personaName, personaDomain);
+  // §1: Build a Set of already-published source URLs for deterministic dedup
+  const publishedUrls = new Set<string>();
+  for (const p of recentPosts ?? []) {
+    if (Array.isArray((p as any).sources)) {
+      for (const url of (p as any).sources) {
+        if (typeof url === "string") publishedUrls.add(url);
+      }
+    }
+  }
+
+  const candidates = await discoverTopics(profile.domain);
+  const decision = await runEditorialPass(
+    candidates,
+    recentTopics,
+    profile,
+    publishedUrls
+  );
 
   if (decision.rejected.length) {
     await supabase.from("rejections").insert(
@@ -108,7 +151,11 @@ export async function publishOnce(agentId: string) {
   // Brief 1s pause so Featherless AI releases concurrency lock before writing pass
   await new Promise((r) => setTimeout(r, 1000));
 
-  const { text } = await writePost(decision.selected, recentPosts ?? [], personaName, personaDomain);
+  const { text } = await writePost(
+    decision.selected,
+    recentPosts ?? [],
+    profile
+  );
 
   const { data: inserted, error } = await supabase
     .from("posts")
@@ -118,6 +165,7 @@ export async function publishOnce(agentId: string) {
       text,
       rationale: `${decision.selected.rationale} (source: ${decision.selected.source})`,
       sources: [decision.selected.url],
+      category: decision.selected.category,
     })
     .select()
     .single();
@@ -137,9 +185,11 @@ export async function maybeCatchUpPublish(agentId: string): Promise<void> {
 
   if (!agent) return;
 
-  const intervalMins = Number(
-    process.env.PUBLISH_INTERVAL_MINUTES ?? PUBLISH_INTERVAL_MINUTES ?? 240
-  );
+  // §5: Per-agent interval takes priority over the env var / global default
+  const intervalMins =
+    (agent as any).interval_minutes ??
+    Number(process.env.PUBLISH_INTERVAL_MINUTES ?? PUBLISH_INTERVAL_MINUTES ?? 240);
+
   const dueAt = new Date(
     new Date(agent.last_published_at).getTime() + intervalMins * 60_000
   );

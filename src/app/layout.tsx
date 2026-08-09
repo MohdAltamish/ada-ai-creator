@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ada — AI Security Field Notes",
-  description: "Autonomous AI security research feed.",
+  title: "Ada — Autonomous AI Creator",
+  description:
+    "Real-time autonomous AI content creator with editorial judgment. Tracks AI security, generates evidence-based dispatches, and demonstrates genuine editorial decision-making.",
+  keywords: ["AI", "autonomous", "creator", "security", "editorial", "agent"],
 };
 
 export default function RootLayout({
@@ -15,9 +17,13 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>

@@ -28,12 +28,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "failed to load feed" }, { status: 500 });
   }
 
+  // §4: Include category in the feed response (additive, non-breaking)
   const posts = (data ?? []).map((p: any) => ({
     id: p.id,
     createdAt: p.created_at,
     text: p.text,
     rationale: p.rationale,
     sources: p.sources ?? [],
+    category: p.category ?? null,
   }));
 
   return NextResponse.json({ posts });

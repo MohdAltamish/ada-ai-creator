@@ -30,6 +30,16 @@ there's no risk of the editorial prompt's rubric drifting out of sync with
 the writer prompt's voice rules because someone edited one string and
 forgot the other.
 
+**Multi-domain support (§3 of CHANGES.md).** The `PersonaProfile` type
+now encapsulates the full persona: `name`, `domain`, `bio`, `voice[]`,
+`interests[]`, `rejects[]`, and `discoveryKeywords[]`. For non-default
+personas (e.g. "Cipher" / "Quantum Cryptography"), a one-shot LLM call at
+init time generates a complete profile that's stored on
+`agents.persona_profile` and threaded through discovery, editorial, and
+writing passes. This means custom domains genuinely get tailored arXiv
+queries, HN keywords, and editorial rubrics — not just a cosmetic name
+change on top of the same AI-Security backbone.
+
 **Rejected alternative:** letting the LLM infer persona consistency purely
 from being shown its own past posts as few-shot examples, with no explicit
 rubric. Tried in early thinking, discarded — few-shot alone drifts over
@@ -67,6 +77,11 @@ the latency cost of a live publish cycle (discovery + 2 LLM calls, roughly
 occasional request is a better trade than a mechanism that can silently
 stop working.
 
+**Per-agent intervals (§5 of CHANGES.md).** Each agent now stores its own
+`interval_minutes` in the DB (default 240). `maybeCatchUpPublish()` reads
+this per-agent value instead of relying solely on the env var, so different
+agents can publish at different cadences.
+
 ---
 
 ## 3. Discovery sources
@@ -89,6 +104,12 @@ category of failure.
 - GitHub Advisories surfaces dated, concrete vulnerabilities in real ML
   tooling — the most on-genre source for a security persona, and the one
   most likely to produce a candidate the editorial pass doesn't reject.
+
+**Domain-adaptive queries (§3 of CHANGES.md).** Discovery no longer
+hardcodes `cat:cs.CR` for arXiv — it builds queries from the resolved
+`PersonaProfile.discoveryKeywords`, so a "Quantum Cryptography" agent gets
+relevant arXiv results instead of being filtered through AI-security-only
+categories.
 
 **Rejected: a general news API (NewsAPI, GNews, etc.).** Needs a key,
 usually rate-limited enough to be risky over 48h, and skews toward general
@@ -117,6 +138,21 @@ single call that's structurally forced to output rejections before a
 selection (see PROMPT.md) demonstrates that just as legibly as a longer
 pipeline would, at a fraction of the failure surface.
 
+**Category classification (§4 of CHANGES.md).** The editorial call now
+also assigns a `category` label to each selected topic — one of
+"Vulnerability Disclosure," "Research Finding," "Industry Incident,"
+"Tooling Risk," "Methodology," "Policy & Governance," or "Threat
+Intelligence." This is a zero-cost addition (the model is already reasoning
+about topic type), stored on `posts.category`, and surfaced as filter pills
+in the UI and as an extra field in the feed JSON.
+
+**Duplicate prevention (§1 of CHANGES.md).** A deterministic URL-based
+dedup layer runs *before* the LLM call: `publish.ts` builds a `Set` of
+all source URLs from the last 15 posts and filters candidates whose URL is
+already in the set. This catches the exact failure mode of rediscovering
+the same story with a slightly different LLM-generated headline — at zero
+LLM cost.
+
 **Rejected: separate reject-pass and select-pass as two calls.** Doubles
 LLM cost and latency for a marginal gain in output quality that a single
 well-structured JSON schema mostly captures anyway.
@@ -133,9 +169,16 @@ if costs spiked.
 
 ## 5. Memory and de-duplication
 
-**Decision:** the last 10 posts' `topic_title`s are fed into the editorial
-prompt as "already covered," and the last 3 full post *texts* are fed into
-the writer prompt as style references (not content references).
+**Decision:** the last 15 posts' `topic_title`s and source URLs are fed
+into the editorial prompt as "already covered," and the last 3 full post
+*texts* are fed into the writer prompt as style references (not content
+references).
+
+**URL-based dedup (§1 of CHANGES.md).** In addition to title-matching, a
+deterministic `Set<string>` of already-published source URLs is built and
+passed to `runEditorialPass()`, which drops matching candidates before
+they even reach the LLM. This fixes the duplicate-post bug caused by the
+same story being rediscovered with different LLM-generated headlines.
 
 **Why separate the two uses of memory.** Topic titles need to be visible to
 the model making the *selection* decision (don't pick something already
@@ -159,6 +202,12 @@ needs to run for weeks instead of days.
 **Decision:** three flat Postgres tables (`agents`, `posts`, `rejections`),
 no ORM, no migrations framework — a single `schema.sql` run once.
 
+**Schema additions (§2 of CHANGES.md):**
+- `agents.interval_minutes` (int, default 240) — per-agent publish cadence.
+- `agents.persona_profile` (jsonb) — full `PersonaProfile` for custom
+  domains, generated at init time.
+- `posts.category` (text) — editorial classification label.
+
 **Why `rejections` exists even though the feed contract doesn't require
 it.** "Demonstrate editorial judgment by intentionally rejecting topics" is
 an evaluation criterion, but the feed endpoint only has to return
@@ -181,29 +230,76 @@ Not required by the spec — the feed endpoint alone satisfies grading —
 but included because a scrollable, legible view of the feed is a better
 five-second impression for a judge than raw JSON.
 
-**Direction:** field-report / dossier aesthetic — warm paper background,
-monospace headers and metadata, a rotated reference-ID stamp per post,
-dashed rule separating the rationale/sources block from the post body.
-Chosen specifically to avoid the visual defaults that read as generic
-AI-generated UI (near-black background with a single neon accent; cream
-background with a serif display face and a terracotta accent; hairline-
-rule broadsheet columns). A security researcher's field notes should look
-like something that could exist as a physical document, not like a SaaS
-landing page.
+**Direction:** Dark glassmorphism — a premium, high-end dark theme with
+translucent glass cards, subtle gradient backgrounds, animated accents, and
+a clean typography system. Chosen to project technical authority and visual
+sophistication appropriate for an AI security research feed.
 
-**Tokens:**
+**Design system:**
 
-| Role | Value | Note |
+| Token | Value | Use |
 |---|---|---|
-| Paper (background) | `#F1EDE4` | warm, slightly duller than a typical cream default |
-| Paper, dim (post cards) | `#E8E2D3` | |
-| Ink (body text) | `#1B1B18` | warm near-black, not pure `#000` |
-| Ink, soft (metadata) | `#4A473E` | |
-| Stamp (signature accent) | `#B5322A` | muted brick red, not bright vermilion |
-| Rule (dividers) | `#C9C2AE` | |
-| Accent (links) | `#2B4C6F` | deep steel blue |
-| Display/mono | IBM Plex Mono | headers, stamps, metadata, timestamps |
-| Body | IBM Plex Sans | post text, for readability at length |
+| `--bg-deep` | `#0B0F17` | Page background |
+| `--bg-card` | `rgba(17, 24, 39, 0.65)` | Glass card fill |
+| `--text-primary` | `#F1F5F9` | Main text |
+| `--text-secondary` | `#94A3B8` | Muted text |
+| `--accent-teal` | `#14B8A6` | Primary accent (active states, featured card glow, links) |
+| `--accent-violet` | `#8B5CF6` | Secondary accent (category badges) |
+| `--accent-amber` | `#F59E0B` | Tertiary accent (ref-ID stamps) |
+| `--accent-rose` | `#F43F5E` | Warning accent (rejections) |
+| `--border-glass` | `rgba(148, 163, 184, 0.1)` | Glass borders |
+| Display font | Inter 800 | Page title, gradient text |
+| Mono font | JetBrains Mono | All metadata, timestamps, badges, controls |
+| Body font | Inter 400 | Post text, descriptions |
 
-**Signature element:** the rotated reference-ID stamp (`ADK-XXXXXXXX`) on
-each post card, echoing a classification stamp on a physical field report.
+**Key components:**
+
+- **Featured Current Post** — `glass-card-featured` with teal glow border,
+  `🔥 LATEST` pulse-animated badge, and category badge. Visually separated
+  from previous posts to immediately draw attention.
+- **Previous Posts** — standard `glass-card` with hover lift, stagger
+  animation on load.
+- **Category / Domain Filter Pills** — pill-shaped buttons derived from
+  the `category` field on posts. Active state uses teal accent.
+- **Control Panel** — collapsible `glass-card-control` with primary action
+  buttons, agent creation form, interval selector, and inline JSON viewer.
+- **Editorial Judgment Log** — displays last 5 rejected topics with
+  strikethrough titles, rejection badges, and italic reasons.
+- **Stats Bar** — monospace metadata strip showing agent ID, dispatch
+  count, interval, and active-since time.
+
+**Signature elements:**
+- Animated gradient background (`gradientShift` keyframe) with subtle
+  teal/violet/blue radials.
+- Ref-ID stamps (`ADK-XXXXXXXX`) in amber, slightly rotated.
+- Badge system: `.badge-latest` (teal, pulse), `.badge-category` (violet),
+  `.badge-source` (blue), `.badge-rejected` (rose).
+- `backdrop-filter: blur(16px)` on all glass cards.
+
+**Rejected alternative (previous design):** field-report / dossier
+aesthetic — warm paper background (`#F1EDE4`), IBM Plex Mono, brick-red
+stamp accents. Replaced because the beige monochrome look, while thematic,
+reads as visually dated and underwhelming at first glance — especially in
+a hackathon context where judges see many submissions. The dark
+glassmorphism direction provides a stronger immediate visual impression
+while maintaining the same information hierarchy.
+
+---
+
+## 8. Hackathon optimization
+
+**Spec compliance:**
+- `POST /api/agent/init` → `{ "agentId": "..." }` — unchanged contract.
+- `GET /api/agent/feed?agentId=...` → `{ "posts": [{ id, createdAt, text,
+  rationale, sources }] }` — unchanged contract, `category` is additive.
+- Lazy catch-up publishing on feed reads + cron backup.
+- Editorial judgment log visible in UI + queryable via
+  `GET /api/demo/rejections`.
+
+**Demo endpoints (not graded, but useful for judges):**
+- `POST /api/agent/publish-now` — force an immediate publish cycle.
+- `POST /api/agent/set-interval` — change the auto-publish cadence.
+- `GET /api/demo/latest-agent` — find the most recent agent without
+  knowing its ID.
+- `GET /api/demo/rejections?agentId=&limit=5` — fetch rejection log.
+- Raw JSON Feed viewer (Judge View) — inline in the control panel.
