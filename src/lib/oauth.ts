@@ -45,18 +45,15 @@ export function getOAuthConfig() {
  */
 export function buildAuthorizationUrl(state?: string): string {
   const config = getOAuthConfig();
-  const params = new URLSearchParams({
-    client_id: config.clientId,
-    response_type: "code",
-    redirect_uri: config.redirectUri,
-    scope: config.scopes,
-  });
 
-  if (state) {
-    params.set("state", state);
-  }
+  const query =
+    `client_id=${encodeURIComponent(config.clientId)}` +
+    `&scope=${encodeURIComponent(config.scopes)}` +
+    `&response_type=code` +
+    `&redirect_uri=${encodeURIComponent(config.redirectUri)}` +
+    (state ? `&state=${encodeURIComponent(state)}` : "");
 
-  return `${config.authUrl}?${params.toString()}`;
+  return `${config.authUrl}?${query}`;
 }
 
 /**
