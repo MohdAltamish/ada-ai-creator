@@ -1,0 +1,53 @@
+:root {
+  --paper: #f1ede4;
+  --paper-dim: #e8e2d3;
+  --ink: #1b1b18;
+  --ink-soft: #4a473e;
+  --redact: #17181a;
+  --stamp: #b5322a;
+  --rule: #c9c2ae;
+  --accent: #2b4c6f;
+
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+body {
+  background-image:
+    radial-gradient(circle at 20% -10%, rgba(0, 0, 0, 0.035), transparent 45%),
+    radial-gradient(circle at 90% 10%, rgba(0, 0, 0, 0.03), transparent 40%);
+}
+
+a {
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fade-in {
+    animation: fadeIn 0.5s ease-out both;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

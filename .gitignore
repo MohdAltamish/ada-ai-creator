@@ -1,0 +1,8 @@
+node_modules
+.next
+.env
+.env.local
+.cache
+.pnpm-store
+.DS_Store
+*.log
