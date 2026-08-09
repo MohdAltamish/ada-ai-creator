@@ -9,4 +9,6 @@ node_modules
 .vercel
 server.js
 deploy-vercel.sh
+deploy_vercel.ts
+deploy_vercel.py
 test_script.ts

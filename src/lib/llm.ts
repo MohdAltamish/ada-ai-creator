@@ -3,31 +3,31 @@
 // OpenAI-compatible endpoint, so switching models is just an env var change.
 // Everything downstream just calls generateJSON() and expects parsed JSON back.
 
-const FEATHERLESS_API_KEY = process.env.FEATHERLESS_API_KEY;
-const FEATHERLESS_MODEL =
-  process.env.FEATHERLESS_MODEL || "deepseek-ai/DeepSeek-V4-Flash-0731";
-const FEATHERLESS_BASE_URL =
-  process.env.FEATHERLESS_BASE_URL || "https://api.featherless.ai/v1";
-
 export async function generateJSON<T = unknown>(opts: {
   system: string;
   prompt: string;
   temperature?: number;
 }): Promise<T> {
-  if (!FEATHERLESS_API_KEY) {
+  const apiKey = process.env.FEATHERLESS_API_KEY;
+  const model =
+    process.env.FEATHERLESS_MODEL || "deepseek-ai/DeepSeek-V4-Flash-0731";
+  const baseUrl =
+    process.env.FEATHERLESS_BASE_URL || "https://api.featherless.ai/v1";
+
+  if (!apiKey) {
     throw new Error("Missing FEATHERLESS_API_KEY env var");
   }
 
-  const url = `${FEATHERLESS_BASE_URL}/chat/completions`;
+  const url = `${baseUrl}/chat/completions`;
 
   const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${FEATHERLESS_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: FEATHERLESS_MODEL,
+      model: model,
       messages: [
         { role: "system", content: opts.system },
         { role: "user", content: opts.prompt },

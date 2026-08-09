@@ -91,7 +91,12 @@ async function fromGitHubAdvisories(): Promise<Candidate[]> {
   try {
     const res = await fetch(
       "https://api.github.com/advisories?per_page=20&sort=published&direction=desc",
-      { headers: { Accept: "application/vnd.github+json" } }
+      {
+        headers: {
+          Accept: "application/vnd.github+json",
+          "User-Agent": "autonomous-ai-creator",
+        },
+      }
     );
     if (!res.ok) return [];
     const data = (await res.json()) as any[];

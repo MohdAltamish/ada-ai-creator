@@ -14,8 +14,12 @@ export function ControlPanel({ currentInterval }: { currentInterval: number }) {
       const res = await fetch("/api/agent/publish-now", { method: "POST" });
       const data = await res.json();
       if (data.ok) {
-        setStatus("✅ New instant post published! Reloading page...");
-        setTimeout(() => window.location.reload(), 1000);
+        if (data.post) {
+          setStatus("✅ New instant post published! Reloading page...");
+        } else {
+          setStatus("ℹ️ Editorial pass finished: topics evaluated, rejections logged below. Reloading...");
+        }
+        setTimeout(() => window.location.reload(), 1500);
       } else {
         setStatus("❌ Error: " + (data.error || "Failed to publish"));
       }

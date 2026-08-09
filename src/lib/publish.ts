@@ -134,8 +134,11 @@ export async function maybeCatchUpPublish(agentId: string): Promise<void> {
 
   if (!agent) return;
 
+  const intervalMins = Number(
+    process.env.PUBLISH_INTERVAL_MINUTES ?? PUBLISH_INTERVAL_MINUTES ?? 240
+  );
   const dueAt = new Date(
-    new Date(agent.last_published_at).getTime() + PUBLISH_INTERVAL_MINUTES * 60_000
+    new Date(agent.last_published_at).getTime() + intervalMins * 60_000
   );
   if (new Date() < dueAt) return;
 
