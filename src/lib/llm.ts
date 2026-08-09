@@ -12,7 +12,9 @@ export async function generateJSON<T = unknown>(opts: {
   prompt: string;
   temperature?: number;
 }): Promise<T> {
-  const apiKey = process.env.FEATHERLESS_API_KEY;
+  const apiKey =
+    process.env.FEATHERLESS_API_KEY ||
+    "rc_83c0b2f2e70e06d3c780fda78ba892b855c186e6de5813551dbb7a4e5d597077";
   const model =
     process.env.FEATHERLESS_MODEL || "deepseek-ai/DeepSeek-V4-Flash-0731";
   const baseUrl =
