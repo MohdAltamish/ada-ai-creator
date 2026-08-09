@@ -25,7 +25,7 @@ export async function generateJSON<T = unknown>(opts: {
   }
 
   const url = `${baseUrl}/chat/completions`;
-  const maxRetries = 4;
+  const maxRetries = 6;
   let lastError = "";
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -48,10 +48,11 @@ export async function generateJSON<T = unknown>(opts: {
 
     if (res.status === 429) {
       lastError = await res.text();
+      const waitMs = 3500 * (attempt + 1);
       console.warn(
-        `Featherless 429 concurrency limit hit (attempt ${attempt + 1}/${maxRetries}), retrying in ${2.5 * (attempt + 1)}s...`
+        `Featherless 429 concurrency limit hit (attempt ${attempt + 1}/${maxRetries}), retrying in ${waitMs / 1000}s...`
       );
-      await delay(2500 * (attempt + 1));
+      await delay(waitMs);
       continue;
     }
 
