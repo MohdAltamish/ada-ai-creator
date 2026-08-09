@@ -179,24 +179,6 @@ export function ControlPanel({ currentInterval }: { currentInterval: number }) {
         >
           {showJson ? "❌ Hide JSON Feed" : "📊 View Raw JSON Feed (Judge View)"}
         </button>
-
-        <a
-          href="/api/auth/featherless/login"
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 12,
-            fontWeight: 600,
-            padding: "8px 16px",
-            background: "var(--accent)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 4,
-            textDecoration: "none",
-            display: "inline-block",
-          }}
-        >
-          🔐 Sign in with Featherless OAuth
-        </a>
       </div>
 
       <div style={{ borderTop: "1px solid var(--rule)", margin: "12px 0", paddingTop: 12 }}>
