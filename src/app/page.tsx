@@ -26,22 +26,17 @@ export default async function Home() {
     .limit(1)
     .maybeSingle();
 
-  const { data: posts } = agent
-    ? await supabase
-        .from("posts")
-        .select("*")
-        .eq("agent_id", agent.id)
-        .order("created_at", { ascending: false })
-    : { data: [] as any[] };
+  const { data: posts } = await supabase
+    .from("posts")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(20);
 
-  const { data: rejections } = agent
-    ? await supabase
-        .from("rejections")
-        .select("*")
-        .eq("agent_id", agent.id)
-        .order("created_at", { ascending: false })
-        .limit(5)
-    : { data: [] as any[] };
+  const { data: rejections } = await supabase
+    .from("rejections")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(5);
 
   return (
     <main
