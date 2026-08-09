@@ -12,8 +12,18 @@ export interface FeatherlessTokenResponse {
 }
 
 export function getOAuthConfig() {
-  const clientId = process.env.FEATHERLESS_CLIENT_ID || "YOUR_CLIENT_ID";
-  const clientSecret = process.env.FEATHERLESS_CLIENT_SECRET || "";
+  const clientId =
+    process.env.FEATHERLESS_CLIENT_ID &&
+    process.env.FEATHERLESS_CLIENT_ID !== "YOUR_CLIENT_ID"
+      ? process.env.FEATHERLESS_CLIENT_ID
+      : "app_mfuaETjlur23Z1w0";
+
+  const clientSecret =
+    process.env.FEATHERLESS_CLIENT_SECRET &&
+    process.env.FEATHERLESS_CLIENT_SECRET !== "YOUR_CLIENT_SECRET"
+      ? process.env.FEATHERLESS_CLIENT_SECRET
+      : "secret_qJ-DHBxI5BQXJFDl5qmVA5g0CDwzvXOX";
+
   const redirectUri =
     process.env.FEATHERLESS_REDIRECT_URI ||
     "http://localhost:3000/api/auth/featherless/callback";
